@@ -1,0 +1,6 @@
+## Interface: 110107
+## Title: Hello World
+## Author: Sugaku
+## Version: 1.0
+
+main.lua
