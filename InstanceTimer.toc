@@ -1,5 +1,5 @@
 ## Interface: 110107
-## Title: Hello World
+## Title: Instance Timer
 ## Author: Sugaku
 ## Version: 1.0
 

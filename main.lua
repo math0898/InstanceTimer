@@ -1,4 +1,4 @@
-SugakuHelloWorld = { };
+InstanceTimer = { };
 
 local seconds = 0;
 local segment = 0;
@@ -24,7 +24,7 @@ local function incrementTenths()
 end
 C_Timer.NewTicker(0.1, incrementTenths);
 
-local activeFrame = CreateFrame("FRAME", "SugakuSpeedrunCurrent", UIParent, "BasicFrameTemplateWithInset");
+local activeFrame = CreateFrame("FRAME", "InstanceTimerRunningFrame", UIParent, "BasicFrameTemplateWithInset");
 activeFrame:SetSize(200, 400);
 activeFrame:SetPoint("CENTER", 850, 150);
 activeFrame:RegisterForDrag("LeftButton");
@@ -71,7 +71,7 @@ local function OnInstanceChangeListener(self, event, ...)
     for i = 1, splitCount do
         toSend = string.format(toSend .. "\nSegment: %dm, %02ds", splits[i] / 60, splits[i] % 60);
     end
-    local inactiveFrame = CreateFrame("FRAME", "SugakuSpeedrunResult", UIParent, "BasicFrameTemplateWithInset");
+    local inactiveFrame = CreateFrame("FRAME", "InstanceTimerResultFrame", UIParent, "BasicFrameTemplateWithInset");
     inactiveFrame:SetSize(200, 400);
     inactiveFrame:SetPoint("CENTER", 850, -250);
     inactiveFrame:SetMovable(true);
@@ -146,10 +146,10 @@ end
 -- Registering Listeners
 --
 
-local frame = CreateFrame("FRAME", "SugakuHelloWorldInstanceListenerFrame");
+local frame = CreateFrame("FRAME", "InstanceTimerEnterWorldListenerFrame");
 frame:RegisterEvent("PLAYER_ENTERING_WORLD");
 frame:SetScript("OnEvent", OnInstanceChangeListener);
 
-local frame2 = CreateFrame("FRAME", "SugakuHelloWorldBossKillListenerFrame");
+local frame2 = CreateFrame("FRAME", "InstanceTimerKillBossListenerFrame");
 frame2:RegisterEvent("BOSS_KILL");
 frame2:SetScript("OnEvent", OnBossKillListener);
