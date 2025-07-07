@@ -1,5 +1,3 @@
-InstanceTimer = { };
-
 local seconds = 0;
 local segment = 0;
 local splits = {};
@@ -12,6 +10,8 @@ local classR, classG, classB, classHex = GetClassColor(englishClass);
 local bestTimes = {};
 local bestTimesNames = {};
 local bestsCount = 1;
+local blacklistedZones = { "Eastern Kingdoms", "Kul Tiras", "Kalimdor", "Khaz Algar (Surface)", "Pandaria", "The Shadowlands" }
+local activeTimerShowing = false;
 
 local function incrementTimer()
     seconds = seconds + 1;
@@ -48,7 +48,9 @@ activeFrame.splitTimes:SetSize(200, 350);
 activeFrame.splitTimes:SetPoint("RIGHT", -25, 150 - floor((splitCount * 12) / 2));
 activeFrame.splitTimes:SetText("");
 activeFrame.splitTimes:SetJustifyH("RIGHT");
-activeFrame:Show();
+if not InstanceTimer.Utils.arrayContains(blacklistedZones, courseName) then
+    activeFrame:Show();
+end
 
 local function updateUI()
     activeFrame.mainTimer:SetText(string.format(" == %d:%02d.%d == ", seconds / 60, seconds % 60, tenths % 10));
@@ -97,8 +99,10 @@ local function OnInstanceChangeListener(self, event, ...)
         s = string.format(s .. splitsNames[i].. " > %d:%02d\n", splits[i] / 60, splits[i] % 60);
     end
     inactiveFrame.splitTimes:SetText(string.format(s .. "Exit > %d:%02d", segment / 60, segment % 60));
-    if seconds > 5 then
+    if not InstanceTimer.Utils.arrayContains(blacklistedZones, courseName) then
         inactiveFrame:Show();
+    else
+        inactiveFrame:Hide();
     end
     inactiveFrame.splitTimes:SetJustifyH("RIGHT");
     --
@@ -131,6 +135,11 @@ local function OnInstanceChangeListener(self, event, ...)
     courseName, iType, diffID, difficultyName, maxPlayers, dynamicDifficulty, isDynamic, instanceID, instanceGroupSize, LfgDungeonID = GetInstanceInfo();
     activeFrame.title:SetText(string.sub(courseName, 1, 18));
     updateUI();
+    if not InstanceTimer.Utils.arrayContains(blacklistedZones, courseName) then
+        activeFrame:Show();
+    else
+        activeFrame:Hide();
+    end
 end
 
 local function OnBossKillListener(self, event, encounterID, encounterName)
