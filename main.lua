@@ -10,7 +10,7 @@ local classR, classG, classB, classHex = GetClassColor(englishClass);
 local bestTimes = {};
 local bestTimesNames = {};
 local bestsCount = 1;
-local blacklistedZones = { "Eastern Kingdoms", "Kul Tiras", "Kalimdor", "Khaz Algar (Surface)", "Pandaria", "The Shadowlands", "Zereth Mortis", "Undermine", "Khaz Algar", "Northrend", "Deepholm" }
+local blacklistedZones = { "Eastern Kingdoms", "Kul Tiras", "Kalimdor", "Khaz Algar (Surface)", "Pandaria", "The Shadowlands", "Zereth Mortis", "Undermine", "Khaz Algar", "Northrend", "Deepholm", "Outland" }
 
 local function incrementTimer()
     seconds = seconds + 1;
