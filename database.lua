@@ -1,6 +1,8 @@
 InstanceTimer.Database = {};
 InstanceTimer.Database.persistentSave = {};
 
+local VERSION = "1.1";
+
 local run = {
     instance = "",
     class = "",
@@ -42,10 +44,14 @@ frameLoadListener:RegisterEvent("ADDON_LOADED");
 function frameLoadListener:OnEvent(event, arg1)
     if event == "ADDON_LOADED" and arg1 == "InstanceTimer" then
         if InstanceTimerSaved == nil then
-            print("Welcome to InstanceTimer! => " .. tostring(arg1));
-            InstanceTimerSaved = true;
+            message("Welcome to instance timer!");
+            InstanceTimerSaved = {};
+            InstanceTimerSaved.Version = VERSION;
+        elseif tostring(InstanceTimer.Version) == VERSION then -- TODO: String compare seemingly isn't working in LUA for some reason. I can't get this condition to be true.
+            print("Welcome back. It's buisness as usual. *Cracks Knuckles*");
         else
-            print("Welcome *back*! => " .. tostring(arg1));
+            print("Welcome back to InstanceTimer! We've made a few changes here and there. Checkout our page to see what's new!"); -- TOOD: Link
+            InstanceTimer.Version = VERSION;
         end
     end
 end
