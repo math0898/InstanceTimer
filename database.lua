@@ -36,3 +36,17 @@ function InstanceTimer.Database.SaveRun(instance, class, segments, segmentNames,
         return -1; -- INVALID_RUN
     end -- TODO: Implement
 end
+
+local frameLoadListener = CreateFrame("FRAME", "InstanceTimerDatabaseLoadListenerFrame");
+frameLoadListener:RegisterEvent("ADDON_LOADED");
+function frameLoadListener:OnEvent(event, arg1)
+    if event == "ADDON_LOADED" and arg1 == "InstanceTimer" then
+        if InstanceTimerSaved == nil then
+            print("Welcome to InstanceTimer! => " .. tostring(arg1));
+            InstanceTimerSaved = true;
+        else
+            print("Welcome *back*! => " .. tostring(arg1));
+        end
+    end
+end
+frameLoadListener:SetScript("OnEvent", frameLoadListener.OnEvent);

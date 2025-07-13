@@ -1,7 +1,8 @@
 ## Interface: 110107
 ## Title: Instance Timer
 ## Author: Sugaku
-## Version: 1.0
+## Version: 1.1
+## SavedVariables: InstanceTimerSaved
 
 utils.lua
 database.lua
