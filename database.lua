@@ -255,7 +255,7 @@ function frameLoadListener:OnEvent(event, arg1)
         loaded = true;
         
         if InstanceTimerSaved.Version == VERSION then
-            print("Welcome back. It's buisness as usual. *Cracks Knuckles*");
+            print("Welcome back. It's business as usual. *Cracks Knuckles*");
         else
             if InstanceTimerSaved.Version == nil then
                 message("Welcome to instance timer!");
