@@ -98,12 +98,16 @@ The following are the 13 valid World of Warcraft class names (as returned by the
 
 - `InstanceTimer.Database.SaveRun(instance, class, segments, segmentNames, finalTime)` - Save a completed run
   - Returns: 1 if PB, 0 if not PB, -1 if invalid
+  - **Validation**: Only accepts complete runs with ALL segments that have been seen before
+  - **Cleanup**: Automatically removes incomplete runs from history and resets incomplete PBs
   
 - `InstanceTimer.Database.GetRun(instance, class)` - Get the personal best run
   - Returns: run object or nil
   
 - `InstanceTimer.Database.IsRunValid(instance, class, segments, segmentNames, finalTime)` - Validate run data
   - Returns: boolean
+  - **Complete Run Validation**: Checks that the run contains all segments from `bestSegments`
+  - First run establishes baseline; subsequent runs must have all previously seen segments
 
 ### Segment Functions
 
@@ -133,3 +137,21 @@ When a player exits a dungeon, the `OnInstanceChangeListener` in `main.lua`:
 1. Calls `InstanceTimer.Database.SaveRun()` with the completed run data
 2. Colors the timer green if it's a PB, red if it's not
 3. The run is automatically added to history and best segments are updated
+4. Incomplete runs (missing bosses) are rejected and incomplete history is cleaned up
+
+## Complete Run Validation
+
+**What makes a run complete?**
+- A run must contain all segments (bosses) that exist in the `bestSegments` table
+- The first run for a dungeon/class establishes the baseline of expected segments
+- All subsequent runs must have all those segments to be accepted
+
+**Example:**
+1. First run: Kill Boss1, Boss2, Boss3 → **Accepted** (establishes baseline)
+2. Second run: Kill Boss1, Boss2 only → **Rejected** (missing Boss3)
+3. Third run: Kill Boss1, Boss2, Boss3 → **Accepted** (complete)
+
+**Automatic Cleanup:**
+- When saving a new run, any incomplete runs in history are automatically removed
+- If the current PB is incomplete, it's reset to nil
+- This ensures data integrity after the first complete run establishes expectations

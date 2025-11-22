@@ -126,6 +126,77 @@ function InstanceTimer.Database.IsRunValid(instance, class, segments, segmentNam
         end
     end
     
+    -- Check if this run has all segments from existing bestSegments
+    -- This ensures we only accept complete runs that killed all bosses
+    if InstanceTimerSaved ~= nil and InstanceTimerSaved.Data ~= nil then
+        if InstanceTimerSaved.Data[instance] ~= nil and InstanceTimerSaved.Data[instance][class] ~= nil then
+            local existingBestSegments = InstanceTimerSaved.Data[instance][class].bestSegments;
+            if existingBestSegments ~= nil then
+                -- Count how many segments are in bestSegments
+                local expectedSegmentCount = 0;
+                for _ in pairs(existingBestSegments) do
+                    expectedSegmentCount = expectedSegmentCount + 1;
+                end
+                
+                -- If there are existing best segments, the new run must have all of them
+                if expectedSegmentCount > 0 then
+                    if segments == nil or segmentNames == nil then
+                        return false;
+                    end
+                    
+                    if #segments < expectedSegmentCount then
+                        return false;
+                    end
+                    
+                    -- Check that all existing segment names are present in the new run
+                    for existingSegmentName, _ in pairs(existingBestSegments) do
+                        local found = false;
+                        for i = 1, #segmentNames do
+                            if segmentNames[i] == existingSegmentName then
+                                found = true;
+                                break;
+                            end
+                        end
+                        if not found then
+                            return false;
+                        end
+                    end
+                end
+            end
+        end
+    end
+    
+    return true;
+end
+
+-- Helper function to check if a run has all expected segments
+local function IsRunComplete(runEntry, expectedSegmentNames)
+    if runEntry == nil or runEntry.segmentNames == nil then
+        return false;
+    end
+    
+    if expectedSegmentNames == nil or #expectedSegmentNames == 0 then
+        return true; -- No expected segments yet, so run is considered complete
+    end
+    
+    if #runEntry.segmentNames < #expectedSegmentNames then
+        return false;
+    end
+    
+    -- Check that all expected segment names are present
+    for _, expectedName in ipairs(expectedSegmentNames) do
+        local found = false;
+        for _, actualName in ipairs(runEntry.segmentNames) do
+            if actualName == expectedName then
+                found = true;
+                break;
+            end
+        end
+        if not found then
+            return false;
+        end
+    end
+    
     return true;
 end
 
@@ -161,14 +232,7 @@ function InstanceTimer.Database.SaveRun(instance, class, segments, segmentNames,
         date = date("%Y-%m-%d %H:%M:%S")
     };
     
-    -- Check if this is a personal best
-    local isPB = false;
-    if classData.personalBest == nil or finalTime < classData.personalBest.finalTime then
-        classData.personalBest = runEntry;
-        isPB = true;
-    end
-    
-    -- Update best segments
+    -- Update best segments first to establish what a complete run looks like
     if segments ~= nil and segmentNames ~= nil then
         for i = 1, #segments do
             local segmentName = segmentNames[i];
@@ -178,6 +242,33 @@ function InstanceTimer.Database.SaveRun(instance, class, segments, segmentNames,
                 classData.bestSegments[segmentName] = segmentTime;
             end
         end
+    end
+    
+    -- Build list of expected segment names from bestSegments
+    local expectedSegmentNames = {};
+    for segmentName, _ in pairs(classData.bestSegments) do
+        table.insert(expectedSegmentNames, segmentName);
+    end
+    
+    -- Clean up incomplete runs from history
+    local cleanedHistory = {};
+    for _, historyRun in ipairs(classData.history) do
+        if IsRunComplete(historyRun, expectedSegmentNames) then
+            table.insert(cleanedHistory, historyRun);
+        end
+    end
+    classData.history = cleanedHistory;
+    
+    -- Check if current PB is incomplete and reset if needed
+    if classData.personalBest ~= nil and not IsRunComplete(classData.personalBest, expectedSegmentNames) then
+        classData.personalBest = nil;
+    end
+    
+    -- Check if this is a personal best
+    local isPB = false;
+    if classData.personalBest == nil or finalTime < classData.personalBest.finalTime then
+        classData.personalBest = runEntry;
+        isPB = true;
     end
     
     -- Add to history
