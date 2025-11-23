@@ -145,38 +145,13 @@ function InstanceTimer.Database.IsRunValid(instance, class, segments, segmentNam
     
     -- Check if this run has all segments from existing bestSegments
     -- This ensures we only accept complete runs that killed all bosses
-    if InstanceTimerSaved ~= nil and InstanceTimerSaved.Data ~= nil then
-        if InstanceTimerSaved.Data[instance] ~= nil and InstanceTimerSaved.Data[instance][class] ~= nil then
-            local existingBestSegments = InstanceTimerSaved.Data[instance][class].bestSegments;
-            if existingBestSegments ~= nil then
-                -- Count how many segments are in bestSegments
-                local expectedSegmentCount = 0;
-                for _ in pairs(existingBestSegments) do
-                    expectedSegmentCount = expectedSegmentCount + 1;
-                end
-                
-                -- If there are existing best segments, the new run must have all of them
-                if expectedSegmentCount > 0 then
-                    if segments == nil or segmentNames == nil then
-                        return false;
-                    end
-                    
-                    if #segments < expectedSegmentCount then
-                        return false;
-                    end
-                    return InstanceTimer.Database.IsRunComplete({
-                            instance = instance,
-                            class = class,
-                            segments = segments,
-                            segmentNames = segmentNames,
-                            finalTime = finalTime}, 
-                        table.keys(existingBestSegments));
-                end
-            end
-        end
-    end
-    
-    return true;
+    return InstanceTimer.Database.IsRunComplete({
+            instance = instance,
+            class = class,
+            segments = segments,
+            segmentNames = segmentNames,
+            finalTime = finalTime}, 
+        table.keys(existingBestSegments));
 end
 
 -- Uses the list of segments contained in bestSegments to validate and clean up run history
