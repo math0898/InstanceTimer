@@ -96,9 +96,6 @@ end
 local function updateUI()
     activeFrame.mainTimer:SetText(string.format(" == %d:%02d.%d == ", seconds / 60, seconds % 60, tenths % 10));
     
-    -- Compute split comparisons if splits have changed
-    computeSplitComparisons();
-    
     for i = 1, MAX_SPLIT_COUNT do
         if i + 1 < MAX_SPLIT_COUNT then
             activeFrame.splitTimes[i + 1]:SetText(string.format(" ---> %d:%02d", segment / 60, segment % 60));
