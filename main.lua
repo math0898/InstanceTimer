@@ -23,30 +23,7 @@ local function incrementTenths()
 end
 C_Timer.NewTicker(0.1, incrementTenths);
 
-local activeFrame = CreateFrame("FRAME", "InstanceTimerRunningFrame", UIParent, "BasicFrameTemplateWithInset");
-activeFrame:SetSize(200, 400);
-activeFrame:SetPoint("CENTER", 850, 150);
-activeFrame:RegisterForDrag("LeftButton");
-activeFrame:SetMovable(true);
-activeFrame:EnableMouse(true);
-activeFrame:SetScript("OnDragStart", activeFrame.StartMoving);
-activeFrame:SetScript("OnDragStop", activeFrame.StopMovingOrSizing);
-
-activeFrame.title = activeFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge");
-activeFrame.title:SetPoint("TOP", 0, -5);
-activeFrame.title:SetText(string.sub(courseName, 1, 18));
-activeFrame.title:SetTextColor(classR, classG, classB);
-
-activeFrame.mainTimer = activeFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge");
-activeFrame.mainTimer:SetSize(200, 50);
-activeFrame.mainTimer:SetPoint("CENTER", 0, -175);
-activeFrame.mainTimer:SetText("");
-
-activeFrame.splitTimes = activeFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge");
-activeFrame.splitTimes:SetSize(200, 350);
-activeFrame.splitTimes:SetPoint("RIGHT", -25, 150 - floor((splitCount * 12) / 2));
-activeFrame.splitTimes:SetText("");
-activeFrame.splitTimes:SetJustifyH("RIGHT");
+local activeFrame = InstanceTimer.Timer.CreateTimer(courseName, {r=classR, g=classG, b=classB}, splitCount);
 if not InstanceTimer.Utils.arrayContains(blacklistedZones, courseName) then
     activeFrame:Show();
 end
@@ -59,6 +36,11 @@ local function updateUI()
     end
     activeFrame.splitTimes:SetText(string.format(s .. " ---> %d:%02d", segment / 60, segment % 60));
     activeFrame.splitTimes:SetJustifyH("RIGHT");
+--         for i = 1, #splitNames do
+--         activeFrame.splitTimes[i]:SetText(string.format(splitsNames[i].. " > %d:%02d\n", splits[i] / 60, splits[i] % 60));
+--         activeFrame.splitTimes[i]:SetJustifyH("RIGHT");
+--     end
+--     activeFrame.splitTimes[#splitNames + 1]:SetText(string.format(" ---> %d:%02d", segment / 60, segment % 60));
 end
 
 C_Timer.NewTicker(0.05, updateUI);
