@@ -145,13 +145,33 @@ function InstanceTimer.Database.IsRunValid(instance, class, segments, segmentNam
     
     -- Check if this run has all segments from existing bestSegments
     -- This ensures we only accept complete runs that killed all bosses
-    return InstanceTimer.Database.IsRunComplete({
-            instance = instance,
-            class = class,
-            segments = segments,
-            segmentNames = segmentNames,
-            finalTime = finalTime}, 
-        table.keys(existingBestSegments));
+    if InstanceTimerSaved ~= nil and InstanceTimerSaved.Data ~= nil then
+        if InstanceTimerSaved.Data[instance] ~= nil and InstanceTimerSaved.Data[instance][class] ~= nil then
+            local existingBestSegments = InstanceTimerSaved.Data[instance][class].bestSegments;
+            if existingBestSegments ~= nil then
+                -- Build list of expected segment names from bestSegments
+                local expectedSegmentNames = {};
+                for segmentName, _ in pairs(existingBestSegments) do
+                    table.insert(expectedSegmentNames, segmentName);
+                end
+                
+                -- Only validate completeness if there are existing segments
+                if #expectedSegmentNames > 0 then
+                    -- Create a run entry structure to pass to IsRunComplete
+                    local runEntry = {
+                        segmentNames = segmentNames or {}
+                    };
+                    
+                    -- Use IsRunComplete to validate the run has all segments
+                    if not IsRunComplete(runEntry, expectedSegmentNames) then
+                        return false;
+                    end
+                end
+            end
+        end
+    end
+    
+    return true;
 end
 
 -- Uses the list of segments contained in bestSegments to validate and clean up run history
