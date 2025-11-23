@@ -164,21 +164,13 @@ function InstanceTimer.Database.IsRunValid(instance, class, segments, segmentNam
                     if #segments < expectedSegmentCount then
                         return false;
                     end
-                    
-                    -- Check that all existing segment names are present in the new run
-                    -- TODO: This is the same as IsRunComplete, could refactor. Need this function's method signature to change to accept RunEntry.
-                    for existingSegmentName, _ in pairs(existingBestSegments) do
-                        local found = false;
-                        for i = 1, #segmentNames do
-                            if segmentNames[i] == existingSegmentName then
-                                found = true;
-                                break;
-                            end
-                        end
-                        if not found then
-                            return false;
-                        end
-                    end
+                    return InstanceTimer.Database.IsRunComplete({
+                            instance = instance,
+                            class = class,
+                            segments = segments,
+                            segmentNames = segmentNames,
+                            finalTime = finalTime}, 
+                        table.keys(existingBestSegments));
                 end
             end
         end
