@@ -7,10 +7,10 @@ local tenths = 0;
 local courseName, iType, diffID, difficultyName, maxPlayers, dynamicDifficulty, isDynamic, instanceID, instanceGroupSize, LfgDungeonID = GetInstanceInfo();
 local localizedClass, englishClass, localizedRace, englishRace, sex, name, realm = GetPlayerInfoByGUID(UnitGUID("player"));
 local classR, classG, classB, classHex = GetClassColor(englishClass);
-local bestTimes = {};
-local bestTimesNames = {};
-local bestsCount = 1;
-local blacklistedZones = { "Eastern Kingdoms", "Kul Tiras", "Kalimdor", "Khaz Algar (Surface)", "Pandaria", "The Shadowlands", "Zereth Mortis", "Undermine", "Khaz Algar", "Northrend", "Deepholm", "Outland" }
+local blacklistedZones = { "Dragon Isles", "Eastern Kingdoms", "Kul Tiras", "Kalimdor", "Khaz Algar (Surface)", "Pandaria", "The Shadowlands", "Zereth Mortis", "Undermine", "Khaz Algar", "Northrend", "Deepholm", "Outland" }
+local aheadColor = { r=0.2, g=0.8, b=0.5 };
+local behindColor = { r=0.8, g=0.2, b=0.3 };
+local goldColor = { r=0.8, g=0.8, b=0.3 };
 
 local function incrementTimer()
     seconds = seconds + 1;
@@ -105,23 +105,18 @@ local function OnInstanceChangeListener(self, event, ...)
     end
     inactiveFrame.splitTimes:SetJustifyH("RIGHT");
     --
-    -- Buggy
+    -- Save run to database and check if it's a PB
     --
-    for i = 1, bestsCount do
-        if bestTimesNames[i] == courseName then
-            if bestTimes[i] > seconds then
-                bestTimes[i] = seconds;
-                inactiveFrame.mainTimer:SetTextColor(0.2, 0.8, 0.5);
-            else 
-                inactiveFrame.mainTimer:SetTextColor(0.8, 0.2, 0.3);
-            end
-        elseif i == bestsCount then
-            bestTimes[i + 1] = seconds;
-            bestTimesNames[i + 1] = courseName;
-            bestsCount = bestsCount + 1;
-            inactiveFrame.mainTimer:SetTextColor(0.2, 0.8, 0.5);
-            break;
+    if not InstanceTimer.Utils.arrayContains(blacklistedZones, courseName) then
+        local saveResult = InstanceTimer.Database.SaveRun(courseName, englishClass, splits, splitsNames, seconds);
+        if saveResult == 1 then
+            -- This is a personal best!
+            inactiveFrame.mainTimer:SetTextColor(aheadColor.r, aheadColor.g, aheadColor.b);
+        elseif saveResult == 0 then
+            -- Run saved but not a PB
+            inactiveFrame.mainTimer:SetTextColor(behindColor.r, behindColor.g, behindColor.b);
         end
+        -- saveResult == -1 means invalid run, don't show special color
     end
     --
     --
