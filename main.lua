@@ -30,14 +30,74 @@ if not InstanceTimer.Utils.arrayContains(blacklistedZones, courseName) then
     activeFrame:Show();
 end
 
-local function updateUI()
-    activeFrame.mainTimer:SetText(string.format(" == %d:%02d.%d == ", seconds / 60, seconds % 60, tenths % 10));
+-- Cache for split colors and pace status to avoid redundant database calls
+local splitColors = {};
+local mainTimerColor = { r=1, g=1, b=1 }; -- Default white
+local lastComputedSplitCount = 0;
+
+-- Compute split colors and pace status (called only when splits change)
+local function computeSplitComparisons()
+    if splitCount == lastComputedSplitCount then
+        return; -- No new splits, skip computation
+    end
     
-    -- Get PB run for comparison
+    lastComputedSplitCount = splitCount;
+    
+    -- Get PB run for comparison (single database call)
     local pbRun = InstanceTimer.Database.GetRun(courseName, englishClass);
     local cumulativeTime = 0;
     local pbCumulativeTime = 0;
     local aheadOfPBPace = nil;
+    
+    for i = 1, splitCount do
+        if splits[i] ~= nil and splitsNames[i] ~= nil then
+            -- Get best segment time for this split (database call per split)
+            local bestSegmentTime = InstanceTimer.Database.GetBestSegment(courseName, englishClass, splitsNames[i]);
+            
+            -- Determine color for this split
+            if bestSegmentTime ~= nil then
+                if splits[i] < bestSegmentTime then
+                    -- This is a new best segment (gold)
+                    splitColors[i] = { r=goldColor.r, g=goldColor.g, b=goldColor.b };
+                elseif splits[i] <= bestSegmentTime * 1.02 then
+                    -- Within 2% of best segment (ahead/green)
+                    splitColors[i] = { r=aheadColor.r, g=aheadColor.g, b=aheadColor.b };
+                else
+                    -- Behind best segment (red)
+                    splitColors[i] = { r=behindColor.r, g=behindColor.g, b=behindColor.b };
+                end
+            else
+                -- No previous best segment, use default color (white)
+                splitColors[i] = { r=1, g=1, b=1 };
+            end
+            
+            -- Track cumulative time vs PB pace
+            cumulativeTime = cumulativeTime + splits[i];
+            if pbRun ~= nil and pbRun.segments ~= nil and pbRun.segments[i] ~= nil then
+                pbCumulativeTime = pbCumulativeTime + pbRun.segments[i];
+                aheadOfPBPace = (cumulativeTime <= pbCumulativeTime);
+            end
+        end
+    end
+    
+    -- Set main timer color based on comparison to PB pace
+    if aheadOfPBPace ~= nil then
+        if aheadOfPBPace then
+            mainTimerColor = { r=aheadColor.r, g=aheadColor.g, b=aheadColor.b };
+        else
+            mainTimerColor = { r=behindColor.r, g=behindColor.g, b=behindColor.b };
+        end
+    else
+        -- No PB to compare against, use default white color
+        mainTimerColor = { r=1, g=1, b=1 };
+    end
+end
+
+local function updateUI()
+    activeFrame.mainTimer:SetText(string.format(" == %d:%02d.%d == ", seconds / 60, seconds % 60, tenths % 10));
+    
+    -- Compute split comparisons if splits have changed
+    computeSplitComparisons();
     
     for i = 1, MAX_SPLIT_COUNT do
         if i + 1 < MAX_SPLIT_COUNT then
@@ -51,43 +111,14 @@ local function updateUI()
         activeFrame.splitTimes[i]:SetText(string.format(splitsNames[i].. " > %d:%02d\n", splits[i] / 60, splits[i] % 60));
         activeFrame.splitTimes[i]:SetJustifyH("RIGHT");
         
-        -- Color the split based on comparison to best segment
-        local bestSegmentTime = InstanceTimer.Database.GetBestSegment(courseName, englishClass, splitsNames[i]);
-        if bestSegmentTime ~= nil then
-            if splits[i] < bestSegmentTime then
-                -- This is a new best segment (gold)
-                activeFrame.splitTimes[i]:SetTextColor(goldColor.r, goldColor.g, goldColor.b);
-            elseif splits[i] <= bestSegmentTime * 1.02 then
-                -- Within 2% of best segment (ahead/green)
-                activeFrame.splitTimes[i]:SetTextColor(aheadColor.r, aheadColor.g, aheadColor.b);
-            else
-                -- Behind best segment (red)
-                activeFrame.splitTimes[i]:SetTextColor(behindColor.r, behindColor.g, behindColor.b);
-            end
-        else
-            -- No previous best segment, use default color (white)
-            activeFrame.splitTimes[i]:SetTextColor(1, 1, 1);
-        end
-        
-        -- Track cumulative time vs PB pace
-        cumulativeTime = cumulativeTime + splits[i];
-        if pbRun ~= nil and pbRun.segments ~= nil and pbRun.segments[i] ~= nil then
-            pbCumulativeTime = pbCumulativeTime + pbRun.segments[i];
-            aheadOfPBPace = (cumulativeTime <= pbCumulativeTime);
+        -- Apply cached color for this split
+        if splitColors[i] ~= nil then
+            activeFrame.splitTimes[i]:SetTextColor(splitColors[i].r, splitColors[i].g, splitColors[i].b);
         end
     end
     
-    -- Color the main timer based on comparison to PB pace
-    if aheadOfPBPace ~= nil then
-        if aheadOfPBPace then
-            activeFrame.mainTimer:SetTextColor(aheadColor.r, aheadColor.g, aheadColor.b);
-        else
-            activeFrame.mainTimer:SetTextColor(behindColor.r, behindColor.g, behindColor.b);
-        end
-    else
-        -- No PB to compare against, use default white color
-        activeFrame.mainTimer:SetTextColor(1, 1, 1);
-    end
+    -- Apply cached main timer color
+    activeFrame.mainTimer:SetTextColor(mainTimerColor.r, mainTimerColor.g, mainTimerColor.b);
     
 end
 
@@ -156,6 +187,10 @@ local function OnInstanceChangeListener(self, event, ...)
     splits = {};
     splitCount = 0;
     splitsNames = {};
+    -- Reset split comparison cache for new run
+    splitColors = {};
+    mainTimerColor = { r=1, g=1, b=1 };
+    lastComputedSplitCount = 0;
     courseName, iType, diffID, difficultyName, maxPlayers, dynamicDifficulty, isDynamic, instanceID, instanceGroupSize, LfgDungeonID = GetInstanceInfo();
     activeFrame.title:SetText(string.sub(courseName, 1, 18));
     updateUI();
@@ -173,6 +208,8 @@ local function OnBossKillListener(self, event, encounterID, encounterName)
     segment = 0;
     splitsNames[splitCount] = string.sub(encounterName, 1, 10);
     activeFrame.splitTimes:SetPoint("CENTER", 0, 150 - floor((splitCount * 12) / 2));
+    -- Compute split comparisons immediately after new split is added
+    computeSplitComparisons();
 end
 
 --
