@@ -156,14 +156,9 @@ function InstanceTimer.Database.IsRunValid(instance, class, segments, segmentNam
                 end
                 
                 -- Only validate completeness if there are existing segments
-                if #expectedSegmentNames > 0 then
-                    -- Create a run entry structure to pass to IsRunComplete
-                    local runEntry = {
-                        segmentNames = segmentNames or {}
-                    };
-                    
+                if #expectedSegmentNames > 0 then   
                     -- Use IsRunComplete to validate the run has all segments
-                    if not IsRunComplete(runEntry, expectedSegmentNames) then
+                    if not IsRunComplete({ segmentNames = segmentNames or {}}, expectedSegmentNames) then
                         return false;
                     end
                 end
