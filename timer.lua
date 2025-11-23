@@ -6,7 +6,7 @@ if InstanceTimer.Timer == nil then
 end
 
 -- Creates and the timer UI frame.
-function InstanceTimer.Timer.CreateTimer (courseName, classRGB, splitCount)
+function InstanceTimer.Timer.CreateTimer (courseName, classRGB, maxSplits)
     local activeFrame = CreateFrame("FRAME", "InstanceTimerRunningFrame", UIParent, "BasicFrameTemplateWithInset");
     activeFrame:SetSize(200, 400);
     activeFrame:SetPoint("CENTER", 850, 150);
@@ -26,20 +26,14 @@ function InstanceTimer.Timer.CreateTimer (courseName, classRGB, splitCount)
     activeFrame.mainTimer:SetPoint("CENTER", 0, -175);
     activeFrame.mainTimer:SetText("");
 
-    activeFrame.splitTimes = activeFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge");
-    activeFrame.splitTimes:SetSize(200, 350);
-    activeFrame.splitTimes:SetPoint("RIGHT", -25, 150 - floor((splitCount * 12) / 2));
-    activeFrame.splitTimes:SetText("");
-    activeFrame.splitTimes:SetJustifyH("RIGHT");
-
-    -- activeFrame.splitTimes = {};
-    -- for i = 1, splitCount do
-    --     activeFrame.splitTimes[i] = activeFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge");
-    --     activeFrame.splitTimes[i]:SetSize(200, 350);
-    --     activeFrame.splitTimes[i]:SetPoint("RIGHT", -25, 150 - floor((i * 12) / 2));
-    --     activeFrame.splitTimes[i]:SetText("");
-    --     activeFrame.splitTimes[i]:SetJustifyH("RIGHT");
-    -- end
+    activeFrame.splitTimes = {};
+    for i = 1, maxSplits do
+        activeFrame.splitTimes[i] = activeFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge");
+        activeFrame.splitTimes[i]:SetSize(200, 350);
+        activeFrame.splitTimes[i]:SetPoint("RIGHT", -25, 150 - floor(((i - 1)* 16)));
+        activeFrame.splitTimes[i]:SetText("");
+        activeFrame.splitTimes[i]:SetJustifyH("RIGHT");
+    end
 
     return activeFrame;
 end
