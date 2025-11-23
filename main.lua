@@ -32,6 +32,13 @@ end
 
 local function updateUI()
     activeFrame.mainTimer:SetText(string.format(" == %d:%02d.%d == ", seconds / 60, seconds % 60, tenths % 10));
+    
+    -- Get PB run for comparison
+    local pbRun = InstanceTimer.Database.GetRun(courseName, englishClass);
+    local cumulativeTime = 0;
+    local pbCumulativeTime = 0;
+    local lastSplitAhead = nil;
+    
     for i = 1, MAX_SPLIT_COUNT do
         if i + 1 < MAX_SPLIT_COUNT then
             activeFrame.splitTimes[i + 1]:SetText(string.format(" ---> %d:%02d", segment / 60, segment % 60));
@@ -39,8 +46,47 @@ local function updateUI()
         if splits[i] == nil or splitsNames[i] == nil then
             break;
         end
+        
+        -- Display the split time
         activeFrame.splitTimes[i]:SetText(string.format(splitsNames[i].. " > %d:%02d\n", splits[i] / 60, splits[i] % 60));
         activeFrame.splitTimes[i]:SetJustifyH("RIGHT");
+        
+        -- Color the split based on comparison to best segment
+        local bestSegmentTime = InstanceTimer.Database.GetBestSegment(courseName, englishClass, splitsNames[i]);
+        if bestSegmentTime ~= nil then
+            if splits[i] < bestSegmentTime then
+                -- This is a new best segment (gold)
+                activeFrame.splitTimes[i]:SetTextColor(goldColor.r, goldColor.g, goldColor.b);
+            elseif splits[i] <= bestSegmentTime * 1.02 then
+                -- Within 2% of best segment (ahead/green)
+                activeFrame.splitTimes[i]:SetTextColor(aheadColor.r, aheadColor.g, aheadColor.b);
+            else
+                -- Behind best segment (red)
+                activeFrame.splitTimes[i]:SetTextColor(behindColor.r, behindColor.g, behindColor.b);
+            end
+        else
+            -- No previous best segment, use default color (white)
+            activeFrame.splitTimes[i]:SetTextColor(1, 1, 1);
+        end
+        
+        -- Track cumulative time vs PB pace
+        cumulativeTime = cumulativeTime + splits[i];
+        if pbRun ~= nil and pbRun.segments ~= nil and pbRun.segments[i] ~= nil then
+            pbCumulativeTime = pbCumulativeTime + pbRun.segments[i];
+            lastSplitAhead = (cumulativeTime <= pbCumulativeTime);
+        end
+    end
+    
+    -- Color the main timer based on last split comparison to PB pace
+    if lastSplitAhead ~= nil then
+        if lastSplitAhead then
+            activeFrame.mainTimer:SetTextColor(aheadColor.r, aheadColor.g, aheadColor.b);
+        else
+            activeFrame.mainTimer:SetTextColor(behindColor.r, behindColor.g, behindColor.b);
+        end
+    else
+        -- No PB to compare against, use default white color
+        activeFrame.mainTimer:SetTextColor(1, 1, 1);
     end
     
 end
