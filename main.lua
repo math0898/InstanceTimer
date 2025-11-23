@@ -7,7 +7,7 @@ local tenths = 0;
 local courseName, iType, diffID, difficultyName, maxPlayers, dynamicDifficulty, isDynamic, instanceID, instanceGroupSize, LfgDungeonID = GetInstanceInfo();
 local localizedClass, englishClass, localizedRace, englishRace, sex, name, realm = GetPlayerInfoByGUID(UnitGUID("player"));
 local classR, classG, classB, classHex = GetClassColor(englishClass);
-local blacklistedZones = { "Eastern Kingdoms", "Kul Tiras", "Kalimdor", "Khaz Algar (Surface)", "Pandaria", "The Shadowlands", "Zereth Mortis", "Undermine", "Khaz Algar", "Northrend", "Deepholm", "Outland" }
+local blacklistedZones = { "Dragon Isles", "Eastern Kingdoms", "Kul Tiras", "Kalimdor", "Khaz Algar (Surface)", "Pandaria", "The Shadowlands", "Zereth Mortis", "Undermine", "Khaz Algar", "Northrend", "Deepholm", "Outland" }
 
 local function incrementTimer()
     seconds = seconds + 1;

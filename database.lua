@@ -1,15 +1,12 @@
 InstanceTimer.Database = {};
 InstanceTimer.Database.persistentSave = {};
 
-local VERSION = "1.1";
-local MAX_HISTORY_PER_DUNGEON = 50; -- Maximum number of runs to keep in history per dungeon/class
-
--- WoW Class List (English class names used by the game API)
-local VALID_CLASSES = {
-    "WARRIOR", "PALADIN", "HUNTER", "ROGUE", "PRIEST", "DEATHKNIGHT",
-    "SHAMAN", "MAGE", "WARLOCK", "MONK", "DRUID", "DEMONHUNTER", "EVOKER"
+local VERSION = "1.2";
+-- Each dungeon run is estimated to be around 150 bytes. One per class is around two Kilobytes * MAX_HISTORY_PER_DUNGEON for each dungeon.
+local MAX_HISTORY_PER_DUNGEON = 50;
+local CLASS_NAMES = {
+    "WARRIOR", "PALADIN", "HUNTER", "ROGUE", "PRIEST", "DEATHKNIGHT", "SHAMAN", "MAGE", "WARLOCK", "MONK", "DRUID", "DEMONHUNTER", "EVOKER"
 };
-
 local loaded = false;
 
 -- Initialize the saved variables structure if it doesn't exist
@@ -17,29 +14,19 @@ local function InitializeSavedVariables()
     if InstanceTimerSaved == nil then
         InstanceTimerSaved = {};
     end
-    
-    if InstanceTimerSaved.Version == nil then
-        InstanceTimerSaved.Version = VERSION;
-    end
-    
-    -- Data structure:
-    -- InstanceTimerSaved.Data[dungeonName][className] = {
-    --     personalBest = { finalTime = number, segments = {}, segmentNames = {}, date = string },
-    --     bestSegments = { [segmentName] = number },
-    --     history = { { finalTime = number, segments = {}, segmentNames = {}, date = string }, ... }
-    -- }
     if InstanceTimerSaved.Data == nil then
         InstanceTimerSaved.Data = {};
     end
 end
 
+-- Returns true if the variable data has been loaded by World of Warcraft.
 function InstanceTimer.Database.IsLoaded()
-    return loaded;
+    return loaded and InstanceTimerSaved ~= nil and InstanceTimerSaved.Data ~= nil;
 end
 
 -- Get the personal best run for a specific dungeon and class
 function InstanceTimer.Database.GetRun(instance, class)
-    if InstanceTimerSaved == nil or InstanceTimerSaved.Data == nil then
+    if InstanceTimer.Database.IsLoaded() == false then
         return nil;
     end
     
@@ -56,7 +43,7 @@ end
 
 -- Get best segment time for a specific segment in a dungeon/class combination
 function InstanceTimer.Database.GetBestSegment(instance, class, segmentName)
-    if InstanceTimerSaved == nil or InstanceTimerSaved.Data == nil then
+    if InstanceTimer.Database.IsLoaded() == false then
         return nil;
     end
     
@@ -77,7 +64,7 @@ end
 
 -- Get run history for a specific dungeon and class
 function InstanceTimer.Database.GetHistory(instance, class)
-    if InstanceTimerSaved == nil or InstanceTimerSaved.Data == nil then
+    if InstanceTimer.Database.IsLoaded() == false then
         return {};
     end
     
@@ -90,6 +77,36 @@ function InstanceTimer.Database.GetHistory(instance, class)
     end
     
     return InstanceTimerSaved.Data[instance][class].history or {};
+end
+
+-- Helper function to check if a run has all expected segments
+local function IsRunComplete(runEntry, expectedSegmentNames)
+    if runEntry == nil or runEntry.segmentNames == nil then
+        return false;
+    end
+    
+    if expectedSegmentNames == nil or #expectedSegmentNames == 0 then
+        return true; -- No expected segments yet, so run is considered complete
+    end
+    
+    if #runEntry.segmentNames < #expectedSegmentNames then
+        return false;
+    end
+    
+    -- Check that all expected segment names are present
+    for _, expectedName in ipairs(expectedSegmentNames) do
+        local found = false;
+        for _, actualName in ipairs(runEntry.segmentNames) do
+            if actualName == expectedName then
+                found = true;
+                break;
+            end
+        end
+        if not found then
+            return false;
+        end
+    end
+    return true;
 end
 
 -- Validate that a run has all required data
@@ -109,7 +126,7 @@ function InstanceTimer.Database.IsRunValid(instance, class, segments, segmentNam
     
     -- Validate class is a valid WoW class
     local validClass = false;
-    for _, validClassName in ipairs(VALID_CLASSES) do
+    for _, validClassName in ipairs(CLASS_NAMES) do
         if validClassName == class then
             validClass = true;
             break;
@@ -149,6 +166,7 @@ function InstanceTimer.Database.IsRunValid(instance, class, segments, segmentNam
                     end
                     
                     -- Check that all existing segment names are present in the new run
+                    -- TODO: This is the same as IsRunComplete, could refactor. Need this function's method signature to change to accept RunEntry.
                     for existingSegmentName, _ in pairs(existingBestSegments) do
                         local found = false;
                         for i = 1, #segmentNames do
@@ -169,35 +187,27 @@ function InstanceTimer.Database.IsRunValid(instance, class, segments, segmentNam
     return true;
 end
 
--- Helper function to check if a run has all expected segments
-local function IsRunComplete(runEntry, expectedSegmentNames)
-    if runEntry == nil or runEntry.segmentNames == nil then
-        return false;
+-- Uses the list of segments contained in bestSegments to validate and clean up run history
+function InstanceTimer.Database.ValidateRunHistory(classData) 
+    -- Build list of expected segment names from bestSegments
+    local expectedSegmentNames = {};
+    for segmentName, _ in pairs(classData.bestSegments) do
+        table.insert(expectedSegmentNames, segmentName);
     end
     
-    if expectedSegmentNames == nil or #expectedSegmentNames == 0 then
-        return true; -- No expected segments yet, so run is considered complete
-    end
-    
-    if #runEntry.segmentNames < #expectedSegmentNames then
-        return false;
-    end
-    
-    -- Check that all expected segment names are present
-    for _, expectedName in ipairs(expectedSegmentNames) do
-        local found = false;
-        for _, actualName in ipairs(runEntry.segmentNames) do
-            if actualName == expectedName then
-                found = true;
-                break;
-            end
-        end
-        if not found then
-            return false;
+    -- Clean up incomplete runs from history
+    local cleanedHistory = {};
+    for _, historyRun in ipairs(classData.history) do
+        if IsRunComplete(historyRun, expectedSegmentNames) then
+            table.insert(cleanedHistory, historyRun);
         end
     end
+    classData.history = cleanedHistory;
     
-    return true;
+    -- Check if current PB is incomplete and reset if needed
+    if classData.personalBest ~= nil and not IsRunComplete(classData.personalBest, expectedSegmentNames) then
+        classData.personalBest = nil;
+    end
 end
 
 -- Save a run to the database
@@ -244,25 +254,7 @@ function InstanceTimer.Database.SaveRun(instance, class, segments, segmentNames,
         end
     end
     
-    -- Build list of expected segment names from bestSegments
-    local expectedSegmentNames = {};
-    for segmentName, _ in pairs(classData.bestSegments) do
-        table.insert(expectedSegmentNames, segmentName);
-    end
-    
-    -- Clean up incomplete runs from history
-    local cleanedHistory = {};
-    for _, historyRun in ipairs(classData.history) do
-        if IsRunComplete(historyRun, expectedSegmentNames) then
-            table.insert(cleanedHistory, historyRun);
-        end
-    end
-    classData.history = cleanedHistory;
-    
-    -- Check if current PB is incomplete and reset if needed
-    if classData.personalBest ~= nil and not IsRunComplete(classData.personalBest, expectedSegmentNames) then
-        classData.personalBest = nil;
-    end
+    InstanceTimer.Database.ValidateRunHistory(classData);
     
     -- Check if this is a personal best
     local isPB = false;
@@ -284,8 +276,8 @@ end
 
 -- Get all personal bests for a specific class across all dungeons
 function InstanceTimer.Database.GetAllPBsForClass(class)
-    if InstanceTimerSaved == nil or InstanceTimerSaved.Data == nil then
-        return {};
+    if (InstanceTimer.Database.IsLoaded() == false) then
+        return nil;
     end
     
     local pbs = {};
@@ -300,8 +292,8 @@ end
 
 -- Get all best segments for a specific dungeon and class
 function InstanceTimer.Database.GetAllBestSegments(instance, class)
-    if InstanceTimerSaved == nil or InstanceTimerSaved.Data == nil then
-        return {};
+    if (InstanceTimer.Database.IsLoaded() == false) then
+        return nil;
     end
     
     if InstanceTimerSaved.Data[instance] == nil then
@@ -317,10 +309,14 @@ end
 
 -- Check if current segment time beats the best segment time
 function InstanceTimer.Database.IsSegmentPB(instance, class, segmentName, segmentTime)
+    if (InstanceTimer.Database.IsLoaded() == false) then
+        return nil;
+    end
+
     local bestSegment = InstanceTimer.Database.GetBestSegment(instance, class, segmentName);
     
     if bestSegment == nil then
-        return true; -- First time doing this segment
+        return true; -- First time doing this segment, or database not loaded
     end
     
     return segmentTime < bestSegment;
@@ -328,9 +324,12 @@ end
 
 -- Get the sum of all best segments (theoretical best possible time)
 function InstanceTimer.Database.GetSumOfBest(instance, class)
+    if (InstanceTimer.Database.IsLoaded() == false) then
+        return nil;
+    end
     local bestSegments = InstanceTimer.Database.GetAllBestSegments(instance, class);
-    
     local sum = 0;
+
     for _, segmentTime in pairs(bestSegments) do
         sum = sum + segmentTime;
     end
@@ -338,6 +337,7 @@ function InstanceTimer.Database.GetSumOfBest(instance, class)
     return sum;
 end
 
+-- This is the listener for when World of Warcraft loads our addon data.
 local frameLoadListener = CreateFrame("FRAME", "InstanceTimerDatabaseLoadListenerFrame");
 frameLoadListener:RegisterEvent("ADDON_LOADED");
 function frameLoadListener:OnEvent(event, arg1)
@@ -352,6 +352,7 @@ function frameLoadListener:OnEvent(event, arg1)
                 message("Welcome to instance timer!");
             else
                 print("Welcome back to InstanceTimer! We've made a few changes here and there. Checkout our page to see what's new!"); -- TODO: Link
+                -- TODO: We'll need to do updating of databases here.
             end
             InstanceTimerSaved.Version = VERSION;
         end
