@@ -37,7 +37,7 @@ local function updateUI()
     local pbRun = InstanceTimer.Database.GetRun(courseName, englishClass);
     local cumulativeTime = 0;
     local pbCumulativeTime = 0;
-    local lastSplitAhead = nil;
+    local aheadOfPBPace = nil;
     
     for i = 1, MAX_SPLIT_COUNT do
         if i + 1 < MAX_SPLIT_COUNT then
@@ -73,13 +73,13 @@ local function updateUI()
         cumulativeTime = cumulativeTime + splits[i];
         if pbRun ~= nil and pbRun.segments ~= nil and pbRun.segments[i] ~= nil then
             pbCumulativeTime = pbCumulativeTime + pbRun.segments[i];
-            lastSplitAhead = (cumulativeTime <= pbCumulativeTime);
+            aheadOfPBPace = (cumulativeTime <= pbCumulativeTime);
         end
     end
     
-    -- Color the main timer based on last split comparison to PB pace
-    if lastSplitAhead ~= nil then
-        if lastSplitAhead then
+    -- Color the main timer based on comparison to PB pace
+    if aheadOfPBPace ~= nil then
+        if aheadOfPBPace then
             activeFrame.mainTimer:SetTextColor(aheadColor.r, aheadColor.g, aheadColor.b);
         else
             activeFrame.mainTimer:SetTextColor(behindColor.r, behindColor.g, behindColor.b);
